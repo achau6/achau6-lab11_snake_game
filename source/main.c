@@ -8,6 +8,7 @@
  *	code, is my own original work.
  */
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include "timer.h"
 #include "keypad.h"
 #include "schedule.h"
@@ -17,45 +18,29 @@
 #include "simAVRHeader.h"
 #endif
 
-enum Demo_States {shift};
-int Demo_Tick(int state) {
+/*
+board = 	0x80	0x40	0x20	0x10	0x80	0x40	0x20	0x01
+	0xFE
 
-        // Local Variables
-        static unsigned char pattern = 0x80;    // LED pattern - 0: LED off; 1: LED on
-        static unsigned char row = 0xFE;        // Row(s) displaying pattern. 
-                                                        // 0: display pattern on row
-                                                        // 1: do NOT display pattern on row
-        // Transitions
-        switch (state) {
-                case shift:
-                break;
-                default:
-                        state = shift;
-                break;
-        }
-        // Actions
-        switch (state) {
-                case shift:
-                        if (row == 0xEF && pattern == 0x01) { // Reset demo 
-                                pattern = 0x80;
-                                row = 0xFE;
-                        } else if (pattern == 0x01) { // Move LED to start of next row
-                                pattern = 0x80;
-                                row = (row << 1) | 0x01;
-                        } else { // Shift LED one spot to the right on current row
-                                pattern >>= 1;
-                        }
-                        break;
-                default:
-        break;
-        }
-        PORTC = pattern;        // Pattern to display
-        PORTD = row;            // Row(s) displaying pattern    
-        return state;
-}
+	0xFD
 
-unsigned char snake_start_col = 0x08;
-unsigned char snake_start_row = 0xFE;
+	0xFB
+
+	0xF7
+
+	0xEF
+
+
+
+
+*/
+unsigned char snake_start_col = 0x02;
+unsigned char snake_start_row = 0xFB;
+unsigned char bait_row = 0xFB;
+unsigned char bait_col = 0x08;
+unsigned char snake_row[20] = { 0xFB, 0xFB }; //chose max size
+unsigned char snake_col[20] = { 0x02, 0x01 };
+int size_of_snake = 2;
 enum snakes { start, init, up, down, right, left };
 int tick(int state){
         /*
@@ -108,11 +93,6 @@ int tick(int state){
                 break;
 
                 case down:
-                        /*if((~PINA & 0x08) != 0x00){
-                                
-                        } else {
-                                state = init;
-                        }*/
                         if((~PINA & 0x01) == 0x01){
                                 state = up;
                         } else if((~PINA & 0x02) == 0x02){
@@ -164,41 +144,174 @@ int tick(int state){
                 break;
 
                 case up:
-                        snake_start_row = (snake_start_row >> 1) | 0x01;
+			if(snake_start_row == 0xFE){
+                                snake_start_row = snake_start_row;
+                        } else if(snake_start_row != 0xFE){
+                        	snake_start_row = (snake_start_row >> 1) | 0x80;
+				if(size_of_snake > 1) {
+                                        //unsigned char old_pos_row = snake_row[size_of_snake];
+                                        for(int i = size_of_snake; i > 0; i --) {
+                                                snake_row[i] = snake_row[i-1];
+                                                snake_col[i] = snake_col[i-1];
+                                        }
+                                        snake_row[0] = snake_start_row;
+                                        snake_col[0] = snake_start_col;
+                                }
+			}
                 break;
 
                 case down:
-                        snake_start_row = (snake_start_row << 1) | 0x01;
+			if(snake_start_row != 0xEF) {
+				snake_start_row = (snake_start_row << 1) | 0x01;
+				if(size_of_snake > 1) {
+					//unsigned char old_pos_row = snake_row[size_of_snake];
+					for(int i = size_of_snake; i > 0; i --) {
+						snake_row[i] = snake_row[i-1];
+						snake_col[i] = snake_col[i-1];
+					}
+					snake_row[0] = snake_start_row;
+					snake_col[0] = snake_start_col;
+				} 
+			}
                 break;
 
                 case left:
                         if(snake_start_col != 0x80){
                                 snake_start_col <<= 1;
+				if(size_of_snake > 1) {
+                                        for(int i = size_of_snake; i > 0; i --) {
+                                                snake_col[i] = snake_col[i-1];
+						snake_row[i] = snake_row[i-1];
+						
+                                        }
+					snake_row[0] = snake_start_row;
+                                        snake_col[0] = snake_start_col;
+                                }
                         }
                 break;
                 case right:
                         if(snake_start_col != 0x01){
                                 snake_start_col >>= 1;
+				if(size_of_snake > 1) {
+                                        for(int i = size_of_snake; i > 0; i --) {
+                                                snake_col[i] = snake_col[i-1];
+                                                snake_row[i] = snake_row[i-1];
+                                        }
+                                        snake_row[0] = snake_start_row;
+                                        snake_col[0] = snake_start_col;
+                                }
                         }
                 break;
 
                 default:
                 break;
         }
-        PORTC = snake_start_col;
-        PORTD = snake_start_row;
+	 unsigned char old_pos_row = snake_start_row;
+        /*if((snake_start_col == bait_col) && (snake_start_row == bait_row)) {
+                //fruit eaten +1
+                size_of_snake += 1;
+                //adds one to tail end with the old position
+                snake_row[size_of_snake] = old_pos_row;
+                bait_row = 0x00;
+                bait_col = 0x00;
+        } */      
+
+	unsigned char snake_rows = snake_start_row;
+	for(int i = 0; i < size_of_snake; i ++){
+		//in case array contains empty elements
+		if(snake_row[i] != 0x00) {
+			snake_rows &= snake_row[i];
+		}
+	}
+
+	unsigned char snake_cols = snake_start_col;
+        for(int i = 0; i < size_of_snake; i ++){
+                //in case array contains empty elements
+                if(snake_col[i] != 0x00) {
+                       snake_cols |= snake_col[i];
+                }
+        }
+
+
+	if(bait_row != 0x00 & bait_col != 0x00) {
+		snake_rows = snake_rows & bait_row; //bait
+		snake_cols = snake_cols | bait_col;
+	}
+        PORTC = snake_cols;
+        PORTD = snake_rows;
         return state;
 }
-/*unsigned long int findGCD(unsigned long int a, unsigned long in b){
-        unsigned long int c;
-        while(1){
-                c = a%b;
-                if(c==0){return b;}
-                a=b;
-                b=c;
-        }
-        return 0;
-}*/
+//			        [can't tail block the way]
+//snake = [0][3] = [0xFE][0x08],      [0xF9][0x04] eat the bait OR [0xFB],[0xFD] 
+//				[0xFB][0x18]/[0xFB][0x0C] 
+//					[0xF3][0x04]
+//size_of_snake = 3;
+//
+//snake_row[20]; += [0xFB], [0xFD], [0xFE]
+//PORD = snake_row[i-1] & snake_row[i]
+//
+//snake_col[20]; += [0x04], [0x04], [0x04]
+//
+//
+//bait = [2][2] = [0xFB][0x04]
+//
+//left:  col = col << 1 | col;
+//right: col = col >> 1 | col;
+/*
+Board:	  8 7 6 5 4 3 2 1 0
+	0
+	1
+	2
+	3
+	4
+
+
+
+ */
+int converter(){
+	/*unsigned char new_row, new _col;
+	case up:
+	break;
+
+	case down:
+	break;
+
+	case left:
+		if(new_row != snake_start_row && new_col != snake_start_col){
+			row = (snake_start_row << 1) | snake_start_row;
+		        row = row |= 0x01;	
+			col = (snake_start_col << 1) | snake_start_col;
+			//col = [0x18];
+		}
+	break;
+
+	case right:
+	break;*/
+
+}
+
+int eat(int state) {
+	/*default fruit location
+	
+	
+	*/
+	//keeps track of the LAST position when snake is still size 0
+	unsigned char old_pos_row = snake_start_row;
+	if((snake_start_col == bait_col) && (snake_start_row == bait_row)) {
+		//fruit eaten +1
+		size_of_snake += 1; 
+		//adds one to tail end with the old position
+		snake_row[size_of_snake] = old_pos_row;
+	       	bait_row = 0x00;
+		bait_col = 0x00;	
+	}  	 	
+
+	switch(state){
+
+	}
+
+}
+
 int main(void) {
     /* Insert DDR and PORT initializations */
         DDRA = 0x00; PORTA = 0xFF;
@@ -258,7 +371,6 @@ int main(void) {
                 tasks[i]->elapsedTime += tasks[i]->period;
         }
 
-        unsigned long int duration = 0;
         while(!TimerFlag);
         TimerFlag = 0;
     }
