@@ -35,10 +35,8 @@ board = 	0x80	0x40	0x20	0x10	0x80	0x40	0x20	0x01
 */
 unsigned char snake_start_col = 0x08;
 unsigned char snake_start_row = 0xFB;
-unsigned char tail_col = 0x01;
-unsigned char tail_row = 0x02;
 unsigned char bait_row = 0xFB;
-unsigned char bait_col = 0x08;
+unsigned char bait_col = 0x80;
 unsigned char snake_row[20] = { 0xFB, 0xFB, 0xFB, 0xFB }; //chose max size
 unsigned char snake_col[20] = { 0x08, 0x04, 0x02, 0x01 };
 unsigned char snake_array[5][8] = { 
@@ -202,31 +200,20 @@ int tick(int state){
                 default:
                 break;
         }
-	 unsigned char old_pos_row = snake_start_row;
+	//unsigned char old_pos_row = snake_start_row;
         if((snake_start_col == bait_col) && (snake_start_row == bait_row)) {
                 bait_row = 0x00;
                 bait_col = 0x00;
+		size_of_snake += 1;
+		snake_row[size_of_snake] = snake_row[size_of_snake-1];
+		snake_col[size_of_snake] = snake_col[size_of_snake-1] >> 1;
         }  
-
-
-	/*unsigned char old_bait_col = bait_col;
-	unsigned char old_bait_row = bait_row;
-
-	if(bait_row != 0x00 & bait_col != 0x00) {
-		if(old_bait_col != bait_col && old_bait_row != bait_row){
-			if(old_bait_row != bait_row){
-				snake_rows = (snake_rows & bait_row) 
-			}
-		}
-		snake_rows = snake_rows & bait_row; //bait
-		snake_cols = snake_cols | bait_col;
-	}*/
 
 	//collision
 	for(int i = 1; i < size_of_snake; i ++) {
 		if(snake_start_row == snake_row[i] && snake_start_col == snake_col[i]) {
-			snake_cols = 0x00;
-			snake_rows = 0x00;
+			snake_start_row = 0x00;
+			snake_start_col = 0x00;
 			//add program end
 			PORTB = 0x10;
 		}
@@ -261,7 +248,7 @@ int eat(int state) {
 	
 	*/
 	//keeps track of the LAST position when snake is still size 0
-	unsigned char old_pos_row = snake_start_row;
+	/*unsigned char old_pos_row = snake_start_row;
 	if((snake_start_col == bait_col) && (snake_start_row == bait_row)) {
 		//fruit eaten +1
 		size_of_snake += 1; 
@@ -273,7 +260,7 @@ int eat(int state) {
 
 	switch(state){
 
-	}
+	}*/
 
 }
 
@@ -281,12 +268,9 @@ unsigned char loop_array[] = { 0xFE, 0xFD, 0xFB, 0xF7, 0xEF };
 unsigned char loop_2array[] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
 unsigned char stub1, stub2;
 int print(int state) {
+	if(snake_start_row != 0x00 && snake_start_col != 0x00) {
 	for(int i = 0; i < 5; i ++){
 		for(int j = 0; j < 8; j ++) {
-			/*if(snake_array[i][j] == 1) {
-				PORTD = stub1;
-				PORTC = stub2;
-			}*/
 			for(int a = 0; a < size_of_snake; a ++){
 				if(loop_array[i] == snake_row[a] && loop_2array[j] == snake_col[a]) {
 					PORTD = loop_array[i];
@@ -295,12 +279,16 @@ int print(int state) {
 			}
 			if(loop_array[i] == bait_row && loop_2array[j] == bait_col) {
 				if(bait_row != 0x00) {
-				PORTD = bait_row;
-				PORTC = bait_col;
+					PORTD = bait_row;
+					PORTC = bait_col;
 				}
 			}
 		}
-        }
+	}
+	} else { 
+		PORTC = 0x00;
+		PORTD = 0x00;
+	}
 	return state;
 }
 
@@ -327,7 +315,7 @@ int main(void) {
         task1.TickFct = &tick;
 
         //task2.state = startsp;
-        task2.period = 10;
+        task2.period = 1;
         task2.elapsedTime = task2.period;
         task2.TickFct = &print;
         
@@ -342,7 +330,7 @@ int main(void) {
         task4.TickFct = &displaySMTick;*/
 
 
-        TimerSet(10);
+        TimerSet(1);
         TimerOn();
 
         unsigned short i;
