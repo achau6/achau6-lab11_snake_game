@@ -33,21 +33,16 @@ board = 	0x80	0x40	0x20	0x10	0x80	0x40	0x20	0x01
 
 
 */
-unsigned char snake_start_col = 0x08;
+unsigned char snake_start_col = 0x02;
 unsigned char snake_start_row = 0xFB;
-unsigned char bait_row = 0xFB;
-unsigned char bait_col = 0x80;
-unsigned char snake_row[20] = { 0xFB, 0xFB, 0xFB, 0xFB }; //chose max size
-unsigned char snake_col[20] = { 0x08, 0x04, 0x02, 0x01 };
-unsigned char snake_array[5][8] = { 
-				    0, 0, 0, 0, 0, 0, 0, 0,
-				    0, 0, 0, 0, 0, 0, 0, 0,
-				    0, 0, 0, 0, 1, 1, 1, 1,
-				    0, 0, 0, 0, 0, 0, 0, 0,
-				    0, 0, 0, 0, 0, 0, 0, 0,
-	
-				   }; 
-int size_of_snake = 4;
+
+unsigned char bait_row[4] = { 0xFB, 0xFE, 0xEF, 0xFD };
+unsigned char bait_col[4] = { 0x80, 0x40, 0x01, 0x04 };
+
+unsigned char snake_row[20] = { 0xFB, 0xFB};//, 0xFB, 0xFB }; //chose max size
+unsigned char snake_col[20] = { 0x02, 0x01};//, 0x02, 0x01 };
+
+int size_of_snake = 2;
 enum snakes { start, init, up, down, right, left, wait };
 int tick(int state){
         /*
@@ -143,7 +138,6 @@ int tick(int state){
                         } else if(snake_start_row != 0xFE){
                         	snake_start_row = (snake_start_row >> 1) | 0x80;
 				if(size_of_snake > 1) {
-                                        //unsigned char old_pos_row = snake_row[size_of_snake];
                                         for(int i = size_of_snake; i > 0; i --) {
                                                 snake_row[i] = snake_row[i-1];
                                                 snake_col[i] = snake_col[i-1];
@@ -158,7 +152,6 @@ int tick(int state){
 			if(snake_start_row != 0xEF) {
 				snake_start_row = (snake_start_row << 1) | 0x01;
 				if(size_of_snake > 1) {
-					//unsigned char old_pos_row = snake_row[size_of_snake];
 					for(int i = size_of_snake; i > 0; i --) {
 						snake_row[i] = snake_row[i-1];
 						snake_col[i] = snake_col[i-1];
@@ -201,73 +194,59 @@ int tick(int state){
                 break;
         }
 	//unsigned char old_pos_row = snake_start_row;
-        if((snake_start_col == bait_col) && (snake_start_row == bait_row)) {
+        /*if((snake_start_col == bait_col) && (snake_start_row == bait_row)) {
                 bait_row = 0x00;
                 bait_col = 0x00;
 		size_of_snake += 1;
 		snake_row[size_of_snake] = snake_row[size_of_snake-1];
 		snake_col[size_of_snake] = snake_col[size_of_snake-1] >> 1;
-        }  
+        }*/  
 
 	//collision
-	for(int i = 1; i < size_of_snake; i ++) {
+	/*for(int i = 1; i < size_of_snake; i ++) {
 		if(snake_start_row == snake_row[i] && snake_start_col == snake_col[i]) {
 			snake_start_row = 0x00;
 			snake_start_col = 0x00;
 			//add program end
 			PORTB = 0x10;
 		}
-	}
+	}*/
         return state;
 }
-int converter(){
-	/*unsigned char new_row, new _col;
-	case up:
-	break;
 
-	case down:
-	break;
-
-	case left:
-		if(new_row != snake_start_row && new_col != snake_start_col){
-			row = (snake_start_row << 1) | snake_start_row;
-		        row = row |= 0x01;	
-			col = (snake_start_col << 1) | snake_start_col;
-			//col = [0x18];
-		}
-	break;
-
-	case right:
-	break;*/
-
-}
-
+enum fruit { ate };
 int eat(int state) {
-	/*default fruit location
-	
-	
-	*/
-	//keeps track of the LAST position when snake is still size 0
-	/*unsigned char old_pos_row = snake_start_row;
-	if((snake_start_col == bait_col) && (snake_start_row == bait_row)) {
-		//fruit eaten +1
-		size_of_snake += 1; 
-		//adds one to tail end with the old position
-		snake_row[size_of_snake] = old_pos_row;
-	       	bait_row = 0x00;
-		bait_col = 0x00;	
+	switch(state) {
+		case ate:
+			state = ate;
+		break;
+		default:
+		break;
 	}  	 	
 
 	switch(state){
-
-	}*/
-
+		case ate:
+			for(int i = 0; i < 4; i ++) {
+			if((snake_start_col == bait_col[i]) && (snake_start_row == bait_row[i])) {
+                		bait_row[i] = 0x00;
+                		bait_col[i] = 0x00;
+                		size_of_snake += 1;
+                		snake_row[size_of_snake] = snake_row[size_of_snake-1];
+                		snake_col[size_of_snake] = snake_col[size_of_snake-1] >> 1;
+        		}
+			}
+		break;
+		default:
+		break;
+	}
+	//add point system
+	return state;
 }
 
 unsigned char loop_array[] = { 0xFE, 0xFD, 0xFB, 0xF7, 0xEF };
 unsigned char loop_2array[] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
 unsigned char stub1, stub2;
-int print(int state) {
+int printSnake(int state) {
 	if(snake_start_row != 0x00 && snake_start_col != 0x00) {
 	for(int i = 0; i < 5; i ++){
 		for(int j = 0; j < 8; j ++) {
@@ -275,12 +254,6 @@ int print(int state) {
 				if(loop_array[i] == snake_row[a] && loop_2array[j] == snake_col[a]) {
 					PORTD = loop_array[i];
 					PORTC = loop_2array[j];
-				}
-			}
-			if(loop_array[i] == bait_row && loop_2array[j] == bait_col) {
-				if(bait_row != 0x00) {
-					PORTD = bait_row;
-					PORTC = bait_col;
 				}
 			}
 		}
@@ -292,9 +265,98 @@ int print(int state) {
 	return state;
 }
 
-int display(int state){
-	//PORTD = stub1;
-	//PORTC = stub2;
+int printFruit(int state) {                                
+        for(int i = 0; i < 5; i ++){
+                for(int j = 0; j < 8; j ++) {
+			for(int a = 0; a < 4; a ++) {
+                        if(loop_array[i] == bait_row[a] && loop_2array[j] == bait_col[a]) {           
+                                        PORTD = loop_array[i]; 
+                                        PORTC = loop_2array[j];                       
+                        }                          
+			}			
+                }                                                                                     
+        } 
+
+        return state;
+}
+
+enum crash { collide };
+int collision(int state) {
+	switch(state) {
+		case collide:
+			state = collide;
+		break;
+		default:
+		break;
+	}
+	switch(state) {
+		case collide:
+		//collision
+        	for(int i = 1; i < size_of_snake; i ++) {
+                	if(snake_start_row == snake_row[i] && snake_start_col == snake_col[i]) {
+                        	snake_start_row = 0x00;
+                        	snake_start_col = 0x00;
+                        	//add program end
+                        	PORTB = 0x10;
+                	}
+       	 	}
+		break;
+
+		default:
+		break;
+
+	}
+
+	return state;
+}
+
+enum game { on , startOver };
+int restart(int state){
+	switch(state) {
+		case on:
+			if((~PINA & 0x10) != 0x10) {
+				state = on;
+			} else {
+				state = startOver;
+			}
+		break;
+
+		case startOver:
+			state = on;
+		break;
+
+		default:
+		break;
+	}
+
+	switch(state){
+		case on:
+		break;
+
+		case startOver:
+			snake_start_col = 0x02;
+			snake_start_row = 0x0FB;
+
+			snake_row[0] = 0xFB;
+		        snake_row[1] = 0xFB;
+
+			snake_col[0] = 0x02;
+		        snake_col[1] = 0x01;
+
+			bait_row[0] = 0xFB;
+			bait_row[1] = 0xFE;
+			bait_row[2] = 0xEF;
+			bait_row[3] = 0xFD;
+
+			bait_col[0] = 0x80;
+			bait_col[1] = 0x40;
+			bait_col[2] = 0x01;
+			bait_col[3] = 0x04;
+		break;
+
+		default:
+		break;
+	}
 	return state;
 }
 
@@ -305,8 +367,8 @@ int main(void) {
         DDRC = 0xFF; PORTC = 0x00;
         DDRD = 0xFF; PORTD = 0x00;
     /* Insert your solution below */
-        static task task1, task2, task3;// task4;
-        task *tasks[] = { &task1,  &task2, &task3};// &task4 };
+        static task task1, task2, task3, task4, task5, task6;
+        task *tasks[] = { &task1,  &task2, &task3, &task4, &task5, &task6 };
         const unsigned short numTasks = sizeof(tasks) / sizeof(task*);
         const char start = 0;
         task1.state = start;
@@ -317,17 +379,28 @@ int main(void) {
         //task2.state = startsp;
         task2.period = 1;
         task2.elapsedTime = task2.period;
-        task2.TickFct = &print;
+        task2.TickFct = &printFruit;
         
-        //task3.state = startL;
+        task3.state = on;
         task3.period = 100;
         task3.elapsedTime = task3.period;
-        task3.TickFct = &display;
+        task3.TickFct = &restart;
         
-        /*task4.state = start;
-        task4.period = 10;
+        task4.state = ate;
+        task4.period = 100;
         task4.elapsedTime = task4.period;
-        task4.TickFct = &displaySMTick;*/
+        task4.TickFct = &eat;
+
+	task5.state = collide;
+        task5.period = 100;
+        task5.elapsedTime = task5.period;
+        task5.TickFct = &collision;
+
+	//task6.state = collide;
+        task6.period = 1;
+        task6.elapsedTime = task6.period;
+        task6.TickFct = &printSnake;
+
 
 
         TimerSet(1);
