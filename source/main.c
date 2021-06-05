@@ -103,6 +103,15 @@ int tick(int state){
                         } else {
                                 state = init;
                         }
+			/*if((~PINA & 0x01) == 0x01){
+                                state = up;
+                        } else if((~PINA & 0x02) == 0x02){
+                                state = down;
+                        } else if((~PINA & 0x08) == 0x08){
+                                state = right;
+                        } else {
+				state = wait;
+			}*/
 
 
                 break;
@@ -122,6 +131,7 @@ int tick(int state){
 			} else {
 				state = init;
 			}
+			//state = left;
 		break;
                 default:
                 break;
@@ -193,24 +203,6 @@ int tick(int state){
                 default:
                 break;
         }
-	//unsigned char old_pos_row = snake_start_row;
-        /*if((snake_start_col == bait_col) && (snake_start_row == bait_row)) {
-                bait_row = 0x00;
-                bait_col = 0x00;
-		size_of_snake += 1;
-		snake_row[size_of_snake] = snake_row[size_of_snake-1];
-		snake_col[size_of_snake] = snake_col[size_of_snake-1] >> 1;
-        }*/  
-
-	//collision
-	/*for(int i = 1; i < size_of_snake; i ++) {
-		if(snake_start_row == snake_row[i] && snake_start_col == snake_col[i]) {
-			snake_start_row = 0x00;
-			snake_start_col = 0x00;
-			//add program end
-			PORTB = 0x10;
-		}
-	}*/
         return state;
 }
 
@@ -298,7 +290,17 @@ int collision(int state) {
                         	snake_start_col = 0x00;
                         	//add program end
                         	PORTB = 0x10;
-                	}
+                	} else if(snake_start_row > 0xFE || snake_start_row < 0xEF) {
+				snake_start_row = 0x00;
+                                snake_start_col = 0x00;
+                                //add program end
+                                PORTB = 0x10;
+			} else if(snake_start_col > 0x80 || snake_start_col < 0x01) {
+				snake_start_row = 0x00;
+                                snake_start_col = 0x00;
+                                //add program end
+                                PORTB = 0x10;
+			}
        	 	}
 		break;
 
@@ -334,6 +336,11 @@ int restart(int state){
 		break;
 
 		case startOver:
+			//for(int i = 2; i < 20; i ++) {
+				//free(snake_row);
+				//free(snake_col);
+			//}
+			size_of_snake = 2;
 			snake_start_col = 0x02;
 			snake_start_row = 0x0FB;
 
@@ -372,7 +379,7 @@ int main(void) {
         const unsigned short numTasks = sizeof(tasks) / sizeof(task*);
         const char start = 0;
         task1.state = start;
-        task1.period = 100;
+        task1.period = 3000;
         task1.elapsedTime = task1.period;
         task1.TickFct = &tick;
 
